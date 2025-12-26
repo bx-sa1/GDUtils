@@ -3,14 +3,6 @@ extends Node
 var _scene_stack: Array[Node]
 var root
 
-@abstract
-class Transition:
-	func on_in(root: Node):
-		pass
-
-	func on_out(root: Node):
-		pass
-
 func _ready() -> void:
 	root = get_tree().root
 	_scene_stack.push_back(root.get_child(-1))
