@@ -4,7 +4,7 @@ var _scene_stack: Array[Node]
 var root
 
 func _ready() -> void:
-	root = get_tree().root
+	root = get_parent()
 	_scene_stack.push_back(root.get_child(-1))
 
 func load_scene(scene_name: String) -> Node:
