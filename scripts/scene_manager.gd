@@ -15,26 +15,23 @@ func load_scene(scene_name: String) -> Node:
 	var new_scene_node = new_scene.instantiate()
 	return new_scene_node
 
-func push_scene(scene_name: String) -> void:
-	var new_scene = load_scene(scene_name)
-	if not new_scene:
-		return
-	root.add_child(new_scene)
-	_scene_stack.push_back(new_scene)
+func push_scene(scene: Node) -> void:
+	root.add_child(scene)
+	_scene_stack.push_back(scene)
 
 func pop_scene() -> void:
 	var top_scene = _scene_stack.pop_back()
 	root.remove_child(top_scene)
 	top_scene.queue_free()
 
-func change_scene(scene_name: String, transition: Node) -> void:
+func change_scene(scene: Node, transition: Node) -> void:
 	if transition:
 		root.add_child(transition)
 		if transition.has_method("_on_in"):
 			await transition.call("_on_in")
 	while not _scene_stack.is_empty():
 		pop_scene()
-	push_scene(scene_name)
+	push_scene(scene)
 	if transition:
 		root.move_child(transition, -1)
 		if transition.has_method("_on_out"):
