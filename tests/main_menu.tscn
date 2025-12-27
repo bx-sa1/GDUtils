@@ -11,10 +11,18 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_06t4h")
 
-[node name="Button" type="Button" parent="."]
+[node name="BoxContainer" type="BoxContainer" parent="."]
 layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-text = "Start"
+offset_right = 40.0
+offset_bottom = 40.0
 
-[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
+[node name="Button" type="Button" parent="BoxContainer"]
+layout_mode = 2
+text = "Character Controller Test"
+
+[node name="Button2" type="Button" parent="BoxContainer"]
+layout_mode = 2
+text = "Weapon Controller Test"
+
+[connection signal="pressed" from="BoxContainer/Button" to="." method="_on_character_controller_test_pressed"]
+[connection signal="pressed" from="BoxContainer/Button2" to="." method="_on_weapon_controller_test_pressed"]

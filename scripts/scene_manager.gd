@@ -36,3 +36,4 @@ func change_scene(scene: Node, transition: Node) -> void:
 		root.move_child(transition, -1)
 		if transition.has_method("_on_out"):
 			await transition.call("_on_out")
+		transition.queue_free()
