@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://d4hr2fmado12u"]
+
+[ext_resource type="Script" uid="uid://d4iugrjywdwg2" path="res://scripts/character_controller/traits/interactable_trait.gd" id="1_rxsgf"]
+
+[sub_resource type="GDScript" id="GDScript_rxsgf"]
+script/source = "extends DamageableTrait
+"
+
+[sub_resource type="GDScript" id="GDScript_aivgv"]
+script/source = "class_name DamageableTraitExt extends DamageableTrait
+"
+
+[node name="TestTrait" type="Node3D"]
+
+[node name="TraitOwner" type="Node3D" parent="."]
+
+[node name="InteractableTrait" type="Node" parent="TraitOwner"]
+script = ExtResource("1_rxsgf")
+metadata/_custom_type_script = "uid://d4iugrjywdwg2"
+
+[node name="DamageableTrait" type="Node" parent="TraitOwner"]
+script = SubResource("GDScript_rxsgf")
+metadata/_custom_type_script = "uid://cajuasosj55k0"
+
+[node name="DamageableTrait2" type="Node" parent="TraitOwner"]
+script = SubResource("GDScript_aivgv")
+metadata/_custom_type_script = "uid://cajuasosj55k0"

@@ -1,60 +1,71 @@
+@tool
+@abstract
 class_name Weapon extends Node3D
 
 @export var data: WeaponData
-@export var fire_point_node_group_name = "fire_point"
+@export var max_fire_distance: float = 1000
+@export var hit_scene: PackedScene
+@export var fire_point_node_group_name: StringName = "fire_point"
 
-var weapon_controller: WeaponController
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings = PackedStringArray()
+
+	if not _check_fire_point():
+		warnings.push_back("Weapon does not have a child node in group %s." % fire_point_node_group_name)
+
+	return warnings
 
 func _ready() -> void:
-	data.init()
-	var parent =  get_parent()
-	if parent is WeaponController:
-		weapon_controller = parent
+	if not Engine.is_editor_hint():
+		data.init()
 
-func reload() -> void:
-	if not weapon_controller:
-		return
+func _check_fire_point() -> bool:
+	var fire_point = _get_fire_point()
+	if not fire_point:
+		return false
+	return true
 
-	if weapon_controller.has_meta("ReloadTrait"):
-		var reload_t = weapon_controller.get_meta("ReloadTrait")
-		await reload_t.on_reload(self)
-	else:
-		await get_tree().create_timer(1).timeout
+func start_reload() -> void:
+	data.start_reload()
+
+func finish_reload() -> void:
+	data.finish_reload()
 
 func fire(origin: Vector3, dir: Vector3, collision_mask: int) -> void:
-	if not weapon_controller:
-		return
-	if data.should_reload():
-		reload()
-		return
-	if not data.can_fire():
-		return
-
-	if not data.fire_strategy:
-		return
-
 	var ammount = data.fire()
 	for i in ammount:
 		var spread_dir = data.get_spread_dir(dir)
-		data.fire_strategy.fire(self, origin, spread_dir, collision_mask)
-		for post in data.post_fire_strategies:
-			post.postfire(self)
+		var aim_point = _get_aim_point(origin, spread_dir, collision_mask)
+		_fire(aim_point, collision_mask)
 
-	if weapon_controller.has_meta("FireTrait"):
-		var fire_t = weapon_controller.get_meta("FireTrait")
-		await fire_t.on_fire(self)
+@abstract
+func _fire(aim_point: Vector3, collision_mask: int) -> void
 
 func _process(delta: float) -> void:
-	data.update_cooldown(delta)
+	if Engine.is_editor_hint():
+		update_configuration_warnings()
+	else:
+		data.update_cooldown(delta)
 
-func get_fire_point() -> Node3D:
+func _get_fire_point() -> Node3D:
 	for child in get_children():
 		if child.is_in_group(fire_point_node_group_name):
 			return child
-	print(self.name, " does not have a node in group \"", fire_point_node_group_name, "\"")
 	return null
 
-func add_decal_to_world(position: Vector3, normal: Vector3):
+func _get_aim_point(origin: Vector3, dir: Vector3, collision_mask: int) -> Vector3:
+	var hit = _ray_cast(origin, origin+dir*max_fire_distance, collision_mask)
+	if hit:
+		return hit.position
+	else:
+		return origin+dir*max_fire_distance
+
+func _ray_cast(from: Vector3, to: Vector3, collision_mask: int) -> Dictionary:
+	var params = PhysicsRayQueryParameters3D.create(from, to, collision_mask)
+	return get_world_3d().direct_space_state.intersect_ray(params)
+
+
+func _spawn_hit_scene(position: Vector3, normal: Vector3):
 	if not data.hit_decal:
 		return
 
@@ -64,3 +75,8 @@ func add_decal_to_world(position: Vector3, normal: Vector3):
 	decal.global_position = position + normal * 0.01
 	var decal_rotation = Quaternion(decal.global_basis.z, normal)
 	decal.quaternion *= decal_rotation
+
+func _call_collider_damageable_trait(collider: Node, position: Vector3, normal: Vector3):
+	if collider.has_meta("DamageableTrait"):
+		var damageable_trait: DamageableTrait = collider.get_meta("DamageableTrait")
+		damageable_trait.on_damage(data.damage, position, normal)

@@ -39,12 +39,16 @@ func should_reload() -> bool:
 func is_infinite_ammo() -> bool:
 	return max_ammo_count == 0
 
-func reload(action: Callable) -> void:
+func start_reload() -> void:
 	if reloading:
 		return
 
 	reloading = true
-	await action.call()
+
+func finish_reload() -> void:
+	if not reloading:
+		return
+
 	ammo_count = max_ammo_count
 	reloading = false
 

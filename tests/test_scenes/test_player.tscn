@@ -1,0 +1,94 @@
+[gd_scene load_steps=20 format=3 uid="uid://h64goj5koew5"]
+
+[ext_resource type="Script" uid="uid://b6p7vecinohog" path="res://scenes/player/player.gd" id="1_qjkh3"]
+[ext_resource type="Script" uid="uid://b2xa273ecr0ju" path="res://scripts/character_controller/strategies/movement_strategy.gd" id="2_boad6"]
+[ext_resource type="Script" uid="uid://gp7pi5lovebm" path="res://scripts/weapon_controller/weapon_controller.gd" id="3_boad6"]
+[ext_resource type="Script" uid="uid://dksuroetqt32s" path="res://scripts/character_controller/strategies/walk_strategy.gd" id="3_rgyib"]
+[ext_resource type="Script" uid="uid://b0jct33h5r1cr" path="res://scripts/character_controller/strategies/jump_stratgey.gd" id="4_hg6s5"]
+[ext_resource type="PackedScene" uid="uid://ogwhndqrfl4y" path="res://scenes/player/hitscan.tscn" id="4_rgyib"]
+[ext_resource type="Script" uid="uid://dbpiol4co6gk2" path="res://scripts/character_controller/strategies/hold_strategy.gd" id="5_8t03j"]
+[ext_resource type="PackedScene" uid="uid://ckt1mh28nxvmw" path="res://scenes/player/hud.tscn" id="5_hg6s5"]
+[ext_resource type="Script" uid="uid://b0d8qgjl7y8vl" path="res://scripts/weapon_controller/hitscan_weapon.gd" id="8_yllr7"]
+[ext_resource type="Script" uid="uid://ct5rddotr43cs" path="res://scripts/weapon_controller/strategies/weapon_post_fire_strategy.gd" id="9_kb6p2"]
+[ext_resource type="Script" uid="uid://ckf1jwcbvo6dj" path="res://scripts/weapon_controller/weapon_data.gd" id="10_wodsf"]
+[ext_resource type="Script" uid="uid://dr1npl16rlmfi" path="res://scenes/player/fire_trait.gd" id="12_32hag"]
+[ext_resource type="Script" uid="uid://ftv4e3bliuxo" path="res://scenes/player/reload_trait.gd" id="13_tqiix"]
+
+[sub_resource type="Resource" id="Resource_hg6s5"]
+script = ExtResource("3_rgyib")
+always_active = true
+default_active = true
+metadata/_custom_type_script = "uid://dksuroetqt32s"
+
+[sub_resource type="Resource" id="Resource_2ieo8"]
+script = ExtResource("4_hg6s5")
+always_active = false
+default_active = false
+metadata/_custom_type_script = "uid://b0jct33h5r1cr"
+
+[sub_resource type="Resource" id="Resource_ebec5"]
+script = ExtResource("5_8t03j")
+always_active = true
+default_active = true
+metadata/_custom_type_script = "uid://dbpiol4co6gk2"
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8t03j"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_2ieo8"]
+
+[sub_resource type="Resource" id="Resource_gk3np"]
+script = ExtResource("10_wodsf")
+name = "Hitscan"
+max_ammo_count = 128
+spread = 1.0
+auto = true
+damage = 10.0
+
+[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("weapon_controller", "head", "visual", "collision")]
+script = ExtResource("1_qjkh3")
+weapon_controller = NodePath("WeaponController")
+head = NodePath("Head")
+visual = NodePath("MeshInstance3D")
+collision = NodePath("CollisionShape3D")
+strategies = Array[ExtResource("2_boad6")]([SubResource("Resource_hg6s5"), SubResource("Resource_2ieo8"), SubResource("Resource_ebec5")])
+metadata/_custom_type_script = "uid://cl4kl6fjoxu57"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_8t03j")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_2ieo8")
+
+[node name="WeaponController" type="Node3D" parent="." node_paths=PackedStringArray("parent_node")]
+script = ExtResource("3_boad6")
+parent_node = NodePath("../Head/Marker3D")
+weapon_list = Array[PackedScene]([ExtResource("4_rgyib")])
+metadata/_custom_type_script = "uid://gp7pi5lovebm"
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56799984, -0.5631585)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="Marker3D" type="Marker3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.315, 0, 0)
+
+[node name="Hitscan" type="Node3D" parent="Head/Marker3D" instance=ExtResource("4_rgyib")]
+script = ExtResource("8_yllr7")
+data = SubResource("Resource_gk3np")
+metadata/_custom_type_script = "uid://b0d8qgjl7y8vl"
+
+[node name="HUD" parent="." instance=ExtResource("5_hg6s5")]
+
+[node name="WeaponDebug" parent="HUD/PanelContainer" index="0" node_paths=PackedStringArray("weapon_controller")]
+weapon_controller = NodePath("../../../WeaponController")
+
+[node name="WeaponFireTrait" type="Node" parent="."]
+script = ExtResource("12_32hag")
+metadata/_custom_type_script = "uid://dcko1oqsgvhp0"
+
+[node name="WeaponReloadTrait" type="Node" parent="."]
+script = ExtResource("13_tqiix")
+metadata/_custom_type_script = "uid://bq5twwki1pau1"
+
+[editable path="HUD"]

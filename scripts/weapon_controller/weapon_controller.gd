@@ -29,6 +29,7 @@ var _debug_viewmodel_weapon: Weapon = null
 
 var weapon_stack: Array[Weapon]
 var current_weapon_id: int = -1
+var character: CharacterController
 
 signal weapon_changed(old_weapon: Weapon, new_weapon: Weapon)
 signal reload_finished
@@ -36,6 +37,10 @@ signal reload_finished
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
+
+	var parent = get_parent()
+	assert(parent is CharacterController)
+	character = parent
 
 	if give_all_weapons:
 		give_weapon("debug_all")
@@ -84,6 +89,36 @@ func change_weapon(new_id: int) -> void:
 	new_weapon.owner = owner
 
 	weapon_changed.emit(current_weapon, new_weapon)
+
+func reload() -> void:
+	var weapon: Weapon = get_current_weapon()
+	if not weapon:
+		return
+
+	weapon.start_reload()
+	if character.has_meta("WeaponReloadTrait"):
+		var weapon_reload_trait: WeaponReloadTrait = character.get_meta("WeaponReloadTrait")
+		await weapon_reload_trait.on_reload(weapon)
+	weapon.finish_reload()
+
+func fire(origin: Vector3, dir: Vector3) -> void:
+	var weapon: Weapon = get_current_weapon()
+	if not weapon:
+		return
+
+	if weapon.data.should_reload():
+		reload()
+		return
+	if not weapon.data.can_fire():
+		return
+
+	if character.has_meta("WeaponFireTrait"):
+		var weapon_fire_trait: WeaponFireTrait = character.get_meta("WeaponReloadTrait")
+		await weapon_fire_trait.on_fire(weapon)
+
+	weapon.fire(origin, dir, ray_collision_mask)
+
+
 
 func get_current_weapon() -> Weapon:
 	return weapon_stack[current_weapon_id] if current_weapon_id > -1 else null

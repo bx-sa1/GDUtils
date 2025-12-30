@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="Mission" load_steps=4 format=3 uid="uid://diubuwbl6lmm7"]
+
+[ext_resource type="Script" uid="uid://bsxkbulohrgxs" path="res://scripts/mission_manager/objective.gd" id="1_lfj4p"]
+[ext_resource type="Script" uid="uid://caw4l0ylqisq2" path="res://scripts/mission_manager/mission.gd" id="2_y3cfq"]
+
+[sub_resource type="Resource" id="Resource_rrj0w"]
+script = ExtResource("1_lfj4p")
+name = "DEADBEEF"
+event_trigger = "DEADBEEF"
+metadata/_custom_type_script = "uid://bsxkbulohrgxs"
+
+[resource]
+script = ExtResource("2_y3cfq")
+name = "Test Mission 2"
+description = "Test Mission 2 Description"
+objectives = Array[ExtResource("1_lfj4p")]([SubResource("Resource_rrj0w")])
+metadata/_custom_type_script = "uid://caw4l0ylqisq2"

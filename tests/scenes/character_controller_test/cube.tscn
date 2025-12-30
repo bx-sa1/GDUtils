@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3 uid="uid://bbcb4w1cjmk8w"]
+
+[ext_resource type="Script" uid="uid://bcvkg1ewxt3yp" path="res://scenes/character_controller_test/box_interact.gd" id="1_qmco4"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_p4p7d"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_suc42"]
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qp65h"]
+material = SubResource("StandardMaterial3D_suc42")
+
+[node name="RigidBody3D" type="RigidBody3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_p4p7d")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_qp65h")
+
+[node name="InteractableTrait" type="Node" parent="."]
+script = ExtResource("1_qmco4")
+metadata/_custom_type_script = "uid://d4iugrjywdwg2"

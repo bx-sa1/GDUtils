@@ -25,6 +25,8 @@ var _pitch: float
 var mouse_captured: bool = false
 
 var current_focus: Node3D
+var current_holding: RigidBody3D
+var current_holding_freeze_mode: RigidBody3D.FreezeMode
 
 const MIN_STEP_HEIGHT := 0.1
 
@@ -76,6 +78,16 @@ func _interact() -> void:
 	if current_focus and current_focus.has_meta("InteractableTrait"):
 		var interactable: InteractableTrait = current_focus.get_meta("InteractableTrait")
 		interactable.on_interact(self)
+		if interactable.holdable:
+			if current_holding:
+				current_holding.freeze = false
+				current_holding.freeze_mode = current_holding_freeze_mode
+				current_holding = null
+			else:
+				current_holding = current_focus
+				current_holding.freeze = true
+				current_holding_freeze_mode = current_holding.freeze_mode
+				current_holding.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 
 func move(delta: float, input_axis := Vector2.ZERO) -> void:
 	var wishdir = (head.global_basis * Vector3(input_axis.x, 0.0, input_axis.y)).normalized()

@@ -5,7 +5,6 @@ var root
 
 func _ready() -> void:
 	root = get_parent()
-	_scene_stack.push_back(root.get_child(-1))
 
 func load_scene(scene_name: String) -> Node:
 	var new_scene = load(scene_name)
@@ -22,7 +21,6 @@ func push_scene(scene: Node) -> void:
 func pop_scene() -> void:
 	var top_scene = _scene_stack.pop_back()
 	root.remove_child(top_scene)
-	top_scene.queue_free()
 
 func change_scene(scene: Node, transition: Node) -> void:
 	if transition:
@@ -36,4 +34,4 @@ func change_scene(scene: Node, transition: Node) -> void:
 		root.move_child(transition, -1)
 		if transition.has_method("_on_out"):
 			await transition.call("_on_out")
-		transition.queue_free()
+		root.remove_child(transition)

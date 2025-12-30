@@ -11,14 +11,18 @@ config_version=5
 [application]
 
 config/name="GDUtils"
-run/main_scene="uid://dx66oi1aavjcj"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[autoload]
+[editor_plugins]
 
-SceneManager="*res://scripts/scene_manager.gd"
-Pause="*res://pause.gd"
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
+[gdunit4]
+
+settings/test/test_lookup_folder=""
+settings/test/test_discovery=true
+ui/toolbar/run_overall=true
 
 [input]
 
