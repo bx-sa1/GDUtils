@@ -1,0 +1,32 @@
+[gd_scene load_steps=7 format=3 uid="uid://bolnxnlknqddf"]
+
+[ext_resource type="Script" uid="uid://b0d8qgjl7y8vl" path="res://scripts/weapon_controller/hitscan_weapon.gd" id="1_5o3g8"]
+[ext_resource type="Script" uid="uid://ckf1jwcbvo6dj" path="res://scripts/weapon_controller/weapon_data.gd" id="2_1pd7s"]
+[ext_resource type="PackedScene" uid="uid://djyhpk0tpbal4" path="res://test_scenes/test_weapon_pickup.tscn" id="3_1pd7s"]
+
+[sub_resource type="Resource" id="Resource_ivmcq"]
+script = ExtResource("2_1pd7s")
+name = "Hitscan"
+metadata/_custom_type_script = "uid://ckf1jwcbvo6dj"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5o3g8"]
+albedo_color = Color(0, 1, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_j3brw"]
+material = SubResource("StandardMaterial3D_5o3g8")
+top_radius = 0.125
+bottom_radius = 0.125
+height = 0.5
+
+[node name="TestHitscan" type="Node3D"]
+script = ExtResource("1_5o3g8")
+data = SubResource("Resource_ivmcq")
+pickup_scene = ExtResource("3_1pd7s")
+metadata/_custom_type_script = "uid://b0d8qgjl7y8vl"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+mesh = SubResource("CylinderMesh_j3brw")
+
+[node name="Marker3D" type="Marker3D" parent="." groups=["fire_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2717029)

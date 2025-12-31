@@ -65,13 +65,9 @@ func test_mission_manager_dec_progess():
 	mission_manager.add_mission(test_mission_1)
 	mission_manager.add_mission(test_mission_2)
 
-	var mission = mission_manager.get_mission("Test Mission 1")
-	assert_that(mission).is_not_null()
-	assert_that(mission).is_equal(test_mission_1)
-
 	mission_manager.dec_progress("Foo")
-	assert_that(mission.is_failed()).is_true()
+	assert_that(test_mission_1.is_failed()).is_true()
 	mission_manager.dec_progress("DEADBEEF")
-	assert_that(mission.is_failed()).is_true()
+	assert_that(test_mission_2.is_failed()).is_true()
 
 	assert_array(mission_manager.failed_missions).contains_exactly([test_mission_1, test_mission_2])

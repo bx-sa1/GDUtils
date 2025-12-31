@@ -1,7 +1,6 @@
 class_name WeaponData extends Resource
 
 @export var name: String
-@export var hit_decal: PackedScene
 @export var slot = -1
 
 @export_category("Stats")
@@ -13,10 +12,6 @@ class_name WeaponData extends Resource
 @export var spread: float = 0.0
 @export var auto: bool = false
 @export var damage: float
-
-@export_category("Strategies")
-@export var fire_strategy: WeaponFireStrategy
-@export var post_fire_strategies: Array[WeaponPostFireStrategy]
 
 var ammo_count: int = max_ammo_count
 var cooldown: bool = false

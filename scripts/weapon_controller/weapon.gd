@@ -5,6 +5,7 @@ class_name Weapon extends Node3D
 @export var data: WeaponData
 @export var max_fire_distance: float = 1000
 @export var hit_scene: PackedScene
+@export var pickup_scene: PackedScene
 @export var fire_point_node_group_name: StringName = "fire_point"
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -18,6 +19,16 @@ func _get_configuration_warnings() -> PackedStringArray:
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		data.init()
+
+func make_pickup() -> WeaponPickup:
+	var pickup = pickup_scene.instantiate()
+	assert(pickup is WeaponPickup)
+
+	var new_self = self.duplicate()
+	pickup.weapon = new_self
+	pickup.add_child(new_self)
+	new_self.position = Vector3.ZERO
+	return pickup
 
 func _check_fire_point() -> bool:
 	var fire_point = _get_fire_point()

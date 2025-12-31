@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://djyhpk0tpbal4"]
+
+[ext_resource type="Script" uid="uid://oibndvamwjrv" path="res://scripts/weapon_controller/weapon_pickup.gd" id="1_lk4y2"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_uwqxd"]
+size = Vector3(0.25, 0.25, 0.25)
+
+[sub_resource type="GDScript" id="GDScript_o0hwi"]
+script/source = "extends InteractableTrait
+
+func on_interact(caller: CharacterController) -> void:
+	caller.weapon_manager.give_weapon(trait_owner.weapon)
+	owner.queue_free()
+"
+
+[node name="Area3D" type="RigidBody3D"]
+continuous_cd = true
+contact_monitor = true
+script = ExtResource("1_lk4y2")
+metadata/_custom_type_script = "uid://oibndvamwjrv"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_uwqxd")
+
+[node name="InteractableTrait" type="Node" parent="."]
+script = SubResource("GDScript_o0hwi")
+holdable = false
+metadata/_custom_type_script = "uid://d4iugrjywdwg2"

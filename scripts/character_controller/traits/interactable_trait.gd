@@ -1,7 +1,7 @@
 class_name InteractableTrait extends Trait
 
 @export var debug: bool = false
-@export var pickup: bool = true
+@export var holdable: bool = true
 
 func on_focus() -> void:
 	if debug: print_debug("on_focus")

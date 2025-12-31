@@ -68,6 +68,7 @@ func check_focus(origin: Vector3, dir: Vector3, interact: bool) -> void:
 			var interactable: InteractableTrait = current_focus.get_meta("InteractableTrait")
 			interactable.on_focus()
 		current_focus = res
+		if debug: print_debug("Focus changed to ", current_focus)
 		if current_focus and current_focus.has_meta("InteractableTrait"):
 			var interactable: InteractableTrait = current_focus.get_meta("InteractableTrait")
 			interactable.on_unfocus()

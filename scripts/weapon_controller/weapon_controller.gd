@@ -3,12 +3,13 @@ class_name WeaponController extends Node3D
 
 var _debug_viewmodel_weapon: Weapon = null
 
-@export var debug_weapon_id: int = 0
+@export var debug_weapon: PackedScene
 @export_tool_button("Debug Viewmodel") var debug_viewmodel = func():
 	if _debug_viewmodel_weapon != null:
 		return
 
-	_debug_viewmodel_weapon = weapon_list[debug_weapon_id].instantiate()
+	_debug_viewmodel_weapon = debug_weapon.instantiate()
+	assert(_debug_viewmodel_weapon is Weapon)
 	if _debug_viewmodel_weapon != null:
 		parent_node.add_child(_debug_viewmodel_weapon)
 		_debug_viewmodel_weapon.owner = get_tree().edited_scene_root
@@ -24,8 +25,6 @@ var _debug_viewmodel_weapon: Weapon = null
 @export_category("Settings")
 @export_flags_3d_physics var ray_collision_mask: int = 0b1
 @export var parent_node: Node3D
-@export var weapon_list: Array[PackedScene] = []
-@export var give_all_weapons = false
 
 var weapon_stack: Array[Weapon]
 var current_weapon_id: int = -1
@@ -42,8 +41,6 @@ func _ready() -> void:
 	assert(parent is CharacterController)
 	character = parent
 
-	if give_all_weapons:
-		give_weapon("debug_all")
 
 func is_fire_pressed(fire_action: String) -> bool:
 	var weapon = get_current_weapon()
@@ -55,17 +52,29 @@ func is_fire_pressed(fire_action: String) -> bool:
 	else:
 		return Input.is_action_just_pressed(fire_action)
 
-func give_weapon(weapon_name: String) -> void:
-	for weapon in weapon_list:
-		var inst: Weapon = weapon.instantiate()
-		if inst.data.name == weapon_name or weapon_name == "debug_all":
-			var slot = inst.data.slot
-			if slot == -1:
-				weapon_stack.push_back(inst)
-			else:
-				if slot >= len(weapon_stack):
-					weapon_stack.resize(slot + 1)
-				weapon_stack[slot] = inst
+func give_weapon(weapon: Weapon) -> void:
+	var weap = weapon.duplicate()
+	if not weapon_stack.has(weapon):
+		var slot = weap.data.slot
+		if slot == -1:
+			weapon_stack.push_back(weap)
+			change_weapon(len(weapon_stack) - 1)
+		else:
+			if slot >= len(weapon_stack):
+				weapon_stack.resize(slot + 1)
+			weapon_stack[slot] = weap
+			change_weapon(slot)
+
+func drop_weapon(id: int) -> void:
+	var weapon: Weapon = weapon_stack.get(id)
+	if not weapon:
+		return
+
+	weapon_stack.remove_at(id)
+	var weapon_pickup: WeaponPickup = weapon.make_pickup()
+	weapon_pickup.linear_velocity = 10 * -global_basis.z
+	get_tree().root.add_child(weapon_pickup)
+	weapon.queue_free()
 
 func change_weapon(new_id: int) -> void:
 	if len(weapon_stack) == 0:
