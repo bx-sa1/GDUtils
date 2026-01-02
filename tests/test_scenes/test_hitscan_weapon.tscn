@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://bolnxnlknqddf"]
 
-[ext_resource type="Script" uid="uid://b0d8qgjl7y8vl" path="res://scripts/weapon_controller/hitscan_weapon.gd" id="1_5o3g8"]
-[ext_resource type="Script" uid="uid://ckf1jwcbvo6dj" path="res://scripts/weapon_controller/weapon_data.gd" id="2_1pd7s"]
+[ext_resource type="Script" uid="uid://b0d8qgjl7y8vl" path="res://scripts/weapon_system/hitscan_weapon.gd" id="1_5o3g8"]
+[ext_resource type="Script" uid="uid://ckf1jwcbvo6dj" path="res://scripts/weapon_system/weapon_data.gd" id="2_1pd7s"]
 [ext_resource type="PackedScene" uid="uid://djyhpk0tpbal4" path="res://test_scenes/test_weapon_pickup.tscn" id="3_1pd7s"]
 
 [sub_resource type="Resource" id="Resource_ivmcq"]
@@ -20,6 +20,7 @@ height = 0.5
 
 [node name="TestHitscan" type="Node3D"]
 script = ExtResource("1_5o3g8")
+debug = true
 data = SubResource("Resource_ivmcq")
 pickup_scene = ExtResource("3_1pd7s")
 metadata/_custom_type_script = "uid://b0d8qgjl7y8vl"

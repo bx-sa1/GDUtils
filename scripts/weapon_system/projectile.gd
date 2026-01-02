@@ -25,8 +25,9 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			assert(e is ProjectileExplosion, "explosion is not a ProjectileExplosion")
 			add_sibling(e)
 			e.global_position = pos
-			(e as ProjectileExplosion)._weapon = _weapon
-			queue_free()
+			e._weapon = _weapon
+			e.collision_mask = 0xFFFFFFFF
 		else:
-			_weapon.collider_call_take_damage(_weapon.data.damage, col, pos, norm)
-			_weapon.add_decal_to_world(pos, norm)
+			_weapon._call_collider_damageable_trait(col, pos, norm)
+			_weapon._spawn_hit_scene(pos, norm)
+		queue_free()

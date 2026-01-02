@@ -5,9 +5,6 @@ class_name HoldStrategy extends MovementStrategy
 @export var hold_lerp: float = 0.3
 @export var mass: float = 60
 
-func _init_always_active() -> bool:
-	return true
-
 func apply(character: CharacterController, delta: float, velocity: Velocity, wishdir: Vector3, forward: Vector3, updir: Vector3, is_on_floor: bool, is_on_wall: bool) -> Velocity:
 	var current_holding: RigidBody3D = character.current_holding
 	if current_holding:
@@ -20,6 +17,4 @@ func apply(character: CharacterController, delta: float, velocity: Velocity, wis
 		var mass_ratio: float = mass/(mass + current_holding.mass)
 		velocity.vertical = mass_ratio * velocity.vertical
 		velocity.horizontal = mass_ratio * velocity.horizontal
-		return velocity
-	else:
-		return velocity
+	return velocity

@@ -2,6 +2,7 @@
 @abstract
 class_name Weapon extends Node3D
 
+@export var debug: bool = false
 @export var data: WeaponData
 @export var max_fire_distance: float = 1000
 @export var hit_scene: PackedScene
@@ -24,10 +25,12 @@ func make_pickup() -> WeaponPickup:
 	var pickup = pickup_scene.instantiate()
 	assert(pickup is WeaponPickup)
 
-	var new_self = self.duplicate()
-	pickup.weapon = new_self
-	pickup.add_child(new_self)
-	new_self.position = Vector3.ZERO
+	var parent = get_parent()
+	if parent != null:
+		parent.remove_child(self)
+	pickup.weapon = self
+	pickup.add_child(self)
+	self.position = Vector3.ZERO
 	return pickup
 
 func _check_fire_point() -> bool:
@@ -47,6 +50,8 @@ func fire(origin: Vector3, dir: Vector3, collision_mask: int) -> void:
 	for i in ammount:
 		var spread_dir = data.get_spread_dir(dir)
 		var aim_point = _get_aim_point(origin, spread_dir, collision_mask)
+		if debug:
+			DebugDraw.draw_ray(get_tree(), origin, aim_point, 0.07, 0.2, Color(1, 1, 0, 1), 10)
 		_fire(aim_point, collision_mask)
 
 @abstract
@@ -73,21 +78,23 @@ func _get_aim_point(origin: Vector3, dir: Vector3, collision_mask: int) -> Vecto
 
 func _ray_cast(from: Vector3, to: Vector3, collision_mask: int) -> Dictionary:
 	var params = PhysicsRayQueryParameters3D.create(from, to, collision_mask)
+	if debug:
+		DebugDraw.draw_ray(get_tree(), from, to, 0.07, 0.2, Color(1, 0, 0, 1), 10)
 	return get_world_3d().direct_space_state.intersect_ray(params)
 
 
 func _spawn_hit_scene(position: Vector3, normal: Vector3):
-	if not data.hit_decal:
+	if not hit_scene:
 		return
 
-	var decal: Node3D = data.hit_decal.instantiate()
+	var decal: Node3D = hit_scene.instantiate()
 	get_tree().get_root().add_child(decal)
 
 	decal.global_position = position + normal * 0.01
 	var decal_rotation = Quaternion(decal.global_basis.z, normal)
 	decal.quaternion *= decal_rotation
 
-func _call_collider_damageable_trait(collider: Node, position: Vector3, normal: Vector3):
+func _call_collider_damageable_trait(collider: Node, position: Vector3, normal: Vector3, damage_modifier: float = 1.0):
 	if collider.has_meta("DamageableTrait"):
 		var damageable_trait: DamageableTrait = collider.get_meta("DamageableTrait")
-		damageable_trait.on_damage(data.damage, position, normal)
+		damageable_trait.on_damage(data.damage * damage_modifier, position, normal)

@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://b652xan4pygwa"]
+[gd_scene load_steps=10 format=3 uid="uid://b652xan4pygwa"]
 
 [ext_resource type="PackedScene" uid="uid://cpqlrh88377o1" path="res://test_scenes/test_character_controller.tscn" id="1_3kcd0"]
 [ext_resource type="PackedScene" uid="uid://djyhpk0tpbal4" path="res://test_scenes/test_weapon_pickup.tscn" id="2_o0hwi"]
-[ext_resource type="PackedScene" uid="uid://bolnxnlknqddf" path="res://test_scenes/test_hitscan.tscn" id="2_uwqxd"]
+[ext_resource type="PackedScene" uid="uid://bolnxnlknqddf" path="res://test_scenes/test_hitscan_weapon.tscn" id="2_uwqxd"]
+[ext_resource type="PackedScene" uid="uid://ijskxw2ng0ek" path="res://test_scenes/test_projectile_weapon.tscn" id="4_rygmi"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_3kcd0"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -17,34 +18,72 @@ sky = SubResource("Sky_uwqxd")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rygmi"]
+albedo_color = Color(1, 0, 0, 1)
+metallic = 1.0
+roughness = 0.84
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kdr4b"]
+albedo_color = Color(0, 1, 0, 1)
+roughness = 0.13
+
 [node name="TestPlayer" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+transform = Transform3D(-0.8660254, -0.43301278, 0.25000003, 0.35355344, -0.17677672, 0.91855866, -0.3535534, 0.8838835, 0.30618626, 40, 11, -48)
 shadow_enabled = true
-directional_shadow_max_distance = 500.0
+directional_shadow_max_distance = 62.2
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_o0hwi")
 
 [node name="Player" parent="." instance=ExtResource("1_3kcd0")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7790852, -5.9297895)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.7790852, -14.92979)
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
 use_collision = true
 collision_mask = 3
 
 [node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.595306, 2.2783813, -35.02649)
-size = Vector3(38.35199, 5.5567627, 71.05298)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 46.91931, 2.2783813, -35.02649)
+size = Vector3(115, 5.5567627, 71.05298)
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D/CSGBox3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0003471, 3.0070648, 1.4204712)
 operation = 2
 size = Vector3(35.058037, 10.7690735, 65.6886)
 
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 59, 0, -1)
+polygon = PackedVector2Array(4.1259727, 4.596576, 3.6516, 4.596576, 3.6713638, 4.0233727, 3.0981598, 4.0233727, 3.0783958, 3.4106379, 2.4063644, 3.3711066, 2.4261284, 2.9362624, 2.0110512, 2.916497, 1.9715195, 2.3235278, 1.2204247, 2.283996, 1.180893, 1.3945425, 0.33097076, 1.4736048, 0.4495659, 0.801573, -0.3608284, 0.8411043, -0.38059235, 0.16907263, -1.1316872, 0.14930701, -1.1909828, -0.4436624, 4.3038635, -0.285537)
+depth = 6.81
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43.5, 0.5, -37)
+size = Vector3(18, 1, 1)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.5, 0.5, -32.5)
+size = Vector3(1, 1, 10)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 2.5, -66)
+size = Vector3(5, 4, 1)
+material = SubResource("StandardMaterial3D_rygmi")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 2.5, -66)
+size = Vector3(5, 4, 1)
+material = SubResource("StandardMaterial3D_kdr4b")
+
 [node name="Area3D" parent="." node_paths=PackedStringArray("weapon") instance=ExtResource("2_o0hwi")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025909424, -14)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 1.125, -30)
 weapon = NodePath("TestHitscan")
 
 [node name="TestHitscan" parent="Area3D" instance=ExtResource("2_uwqxd")]
+
+[node name="Area3D2" parent="." node_paths=PackedStringArray("weapon") instance=ExtResource("2_o0hwi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 1.125, -28)
+weapon = NodePath("TestHitscan")
+
+[node name="TestHitscan" parent="Area3D2" instance=ExtResource("4_rygmi")]

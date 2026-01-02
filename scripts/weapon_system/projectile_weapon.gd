@@ -14,7 +14,7 @@ func _fire(aim_point: Vector3, collision_mask: int) -> void:
 	assert(p is Projectile)
 	p._weapon = self
 	p.collision_layer = projectile_collision_layer
-	p.collision_mask = 9223372036854775807 & ~p.collision_layer
+	p.collision_mask = collision_mask
 
 	var fire_point = _get_fire_point()
 	if not fire_point:

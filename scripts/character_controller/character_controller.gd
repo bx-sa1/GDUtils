@@ -30,6 +30,8 @@ var current_holding_freeze_mode: RigidBody3D.FreezeMode
 
 const MIN_STEP_HEIGHT := 0.1
 
+signal interacted_with(collider: Node)
+
 func get_strategy(type: Variant) -> MovementStrategy:
 	for c in strategies:
 		if is_instance_of(c, type):
@@ -74,6 +76,7 @@ func check_focus(origin: Vector3, dir: Vector3, interact: bool) -> void:
 			interactable.on_unfocus()
 	if interact:
 		_interact()
+		interacted_with.emit(current_focus)
 
 func _interact() -> void:
 	if current_focus and current_focus.has_meta("InteractableTrait"):
@@ -102,8 +105,7 @@ func move(delta: float, input_axis := Vector2.ZERO) -> void:
 	_velocity.vertical = velocity.project(up_direction)
 	_velocity.horizontal = velocity - _velocity.vertical
 	for strat in strategies:
-		if strat.is_active():
-			_velocity = strat.apply(self, delta, _velocity, wishdir, _forward, up_direction, is_on_floor(), is_on_wall())
+		_velocity = strat.apply(self, delta, _velocity, wishdir, _forward, up_direction, is_on_floor(), is_on_wall())
 	velocity = _velocity.sum()
 	move_and_slide()
 

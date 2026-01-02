@@ -1,25 +1,30 @@
-[gd_scene load_steps=16 format=3 uid="uid://cpqlrh88377o1"]
+[gd_scene load_steps=13 format=3 uid="uid://cpqlrh88377o1"]
 
 [ext_resource type="Script" uid="uid://b2xa273ecr0ju" path="res://scripts/character_controller/strategies/movement_strategy.gd" id="1_rt3eq"]
-[ext_resource type="Script" uid="uid://gp7pi5lovebm" path="res://scripts/weapon_controller/weapon_controller.gd" id="2_hxpf6"]
 [ext_resource type="Script" uid="uid://dksuroetqt32s" path="res://scripts/character_controller/strategies/walk_strategy.gd" id="2_vsn0d"]
 [ext_resource type="Script" uid="uid://b0jct33h5r1cr" path="res://scripts/character_controller/strategies/jump_stratgey.gd" id="3_mqiol"]
-[ext_resource type="Script" uid="uid://dcko1oqsgvhp0" path="res://scripts/weapon_controller/traits/weapon_fire_trait.gd" id="3_qqn0c"]
 [ext_resource type="Script" uid="uid://dbpiol4co6gk2" path="res://scripts/character_controller/strategies/hold_strategy.gd" id="4_jbpqc"]
-[ext_resource type="Script" uid="uid://bq5twwki1pau1" path="res://scripts/weapon_controller/traits/weapon_reload_trait.gd" id="4_rt3eq"]
-[ext_resource type="PackedScene" uid="uid://bolnxnlknqddf" path="res://test_scenes/test_hitscan.tscn" id="5_jbpqc"]
 
 [sub_resource type="GDScript" id="GDScript_jysa6"]
 script/source = "extends CharacterController
 
-@onready var weapon_manager: WeaponController = $WeaponController
+@export var weapon_parent: Node
 @onready var jump_strategy: JumpStrategy = get_strategy(JumpStrategy)
 
+var weapon_manager: WeaponManager
+var inventory_manager: InventoryManager
+
 func _ready() -> void:
-	jump_strategy.active_p = func(): return self.is_on_floor() and Input.is_action_just_pressed(\"jump\")
+	weapon_manager = WeaponManager.new(weapon_parent)
+	inventory_manager = InventoryManager.new(4, [Weapon])
 	
 func _input(event: InputEvent) -> void:
 	look(event)
+	if event is InputEventKey:
+		var num = event.keycode - 48
+		if num >= 0 and num < 10:
+			var item = inventory_manager.get_item(num-1)
+			weapon_manager.set_weapon(item)
 	
 func _process(delta: float) -> void:
 	var camera = get_viewport().get_camera_3d()
@@ -27,34 +32,41 @@ func _process(delta: float) -> void:
 	var origin = camera.project_ray_origin(viewport_size/2)
 	var dir = camera.project_ray_normal(viewport_size/2)
 	check_focus(origin, dir, Input.is_action_just_pressed(\"interact\"))
-	
+	if weapon_manager.is_fire_pressed(\"fire\"):
+		weapon_manager.fire(origin, dir)
+	if Input.is_action_just_pressed(\"drop\"):
+		weapon_manager.drop_weapon()
+		
 func _physics_process(delta: float) -> void:
 	var idir = Input.get_vector(\"move_left\", \"move_right\", \"move_forward\", \"move_back\")
 	move(delta, idir)
+
+func _on_interacted_with(collider: Node) -> void:
+	if collider is WeaponPickup:
+		inventory_manager.add_item(collider.weapon)
+		weapon_manager.set_weapon(collider.weapon, false)
+		collider.queue_free()
 "
 
 [sub_resource type="Resource" id="Resource_xhyh2"]
 script = ExtResource("2_vsn0d")
-always_active = true
-default_active = true
 metadata/_custom_type_script = "uid://dksuroetqt32s"
 
 [sub_resource type="Resource" id="Resource_qfi37"]
 script = ExtResource("3_mqiol")
-jump_height = 30.0
-always_active = false
-default_active = false
+jump_buffer_time = 0.4
+cayote_buffer_time = 0.2
 metadata/_custom_type_script = "uid://b0jct33h5r1cr"
 
 [sub_resource type="Resource" id="Resource_mdqcp"]
 script = ExtResource("4_jbpqc")
-always_active = true
-default_active = true
 metadata/_custom_type_script = "uid://dbpiol4co6gk2"
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_vsn0d"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_mqiol"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_nh2c6"]
 
 [sub_resource type="GDScript" id="GDScript_vsn0d"]
 script/source = "@tool
@@ -73,11 +85,15 @@ func _draw():
 	draw_circle(Vector2.ZERO, dot_radius, dot_color)
 "
 
-[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("head", "visual", "collision")]
+[node name="Player" type="CharacterBody3D" node_paths=PackedStringArray("weapon_parent", "head", "visual", "collision")]
+collision_layer = 4
 script = SubResource("GDScript_jysa6")
+weapon_parent = NodePath("Head/Viewmodel")
+debug = true
 head = NodePath("Head")
 visual = NodePath("MeshInstance3D")
 collision = NodePath("CollisionShape3D")
+max_step_height = 1.0
 strategies = Array[ExtResource("1_rt3eq")]([SubResource("Resource_xhyh2"), SubResource("Resource_qfi37"), SubResource("Resource_mdqcp")])
 metadata/_custom_type_script = "uid://cl4kl6fjoxu57"
 
@@ -88,27 +104,16 @@ shape = SubResource("CapsuleShape3D_vsn0d")
 mesh = SubResource("CapsuleMesh_mqiol")
 
 [node name="Head" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.515, -0.515)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.515, 0)
 
-[node name="Camera3D" type="Camera3D" parent="Head"]
+[node name="SpringArm3D" type="SpringArm3D" parent="Head"]
+shape = SubResource("SphereShape3D_nh2c6")
+spring_length = 10.0
 
 [node name="Viewmodel" type="Node3D" parent="Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.225, -0.105, 0)
 
-[node name="WeaponController" type="Node3D" parent="." node_paths=PackedStringArray("parent_node")]
-script = ExtResource("2_hxpf6")
-debug_weapon = ExtResource("5_jbpqc")
-ray_collision_mask = null
-parent_node = NodePath("../Head/Viewmodel")
-metadata/_custom_type_script = "uid://gp7pi5lovebm"
-
-[node name="WeaponFireTrait" type="Node" parent="."]
-script = ExtResource("3_qqn0c")
-metadata/_custom_type_script = "uid://dcko1oqsgvhp0"
-
-[node name="WeaponReloadTrait" type="Node" parent="."]
-script = ExtResource("4_rt3eq")
-metadata/_custom_type_script = "uid://bq5twwki1pau1"
+[node name="Camera3D" type="Camera3D" parent="Head"]
 
 [node name="HUD" type="Control" parent="."]
 layout_mode = 3
@@ -125,10 +130,8 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -20.0
-offset_top = -20.0
-offset_right = 20.0
-offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
 script = SubResource("GDScript_vsn0d")
+
+[connection signal="interacted_with" from="." to="." method="_on_interacted_with"]

@@ -1,5 +1,6 @@
 class_name ProjectileExplosion extends Area3D
 
+@export var debug: bool = false
 @export var force: float = 1.0
 @export var force_decay_rate: float = 1.0
 
@@ -15,13 +16,13 @@ func _push_bodies() -> void:
 		var force_dir = (body.global_position - global_position).normalized()
 		var dist = (body.global_position - global_position).length()
 		var decay = exp(-(force_decay_rate * dist))
-
 		var force_mag = force * decay
+		if debug:
+			DebugDraw.draw_ray(get_tree(), global_position, global_position+force_dir*force_mag, 0.07, 0.08, Color(0,0,1,1), 10)
+
 		if body is RigidBody3D or body is PhysicalBone3D:
 			body.apply_impulse(force_dir * force_mag)
+		elif body is CharacterController:
+			body.velocity = force_dir * force_mag
 		else:
-			if body.has_method("_on_weapon_hit_explosion_impulse"):
-				body.get("_on_weapon_hit_explosion_impulse").call(_weapon, force_dir * force_mag)
-			else:
-				printerr("Body ", body.name, " does not have method _on_weapon_hit_explosion_impulse.")
-			_weapon.collider_call_take_damage(_weapon.data.damage * decay, body)
+			_weapon._call_collider_damageable_trait(body, Vector3.INF, Vector3.ZERO, decay)

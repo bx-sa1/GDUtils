@@ -10,6 +10,9 @@ func _fire(aim_point: Vector3, collision_mask: int) -> void:
 	var ray_dir = (aim_point - ray_start).normalized()
 	var ray_end = aim_point+ray_dir*2
 	var hit = _ray_cast(ray_start, ray_end, collision_mask)
+	if debug:
+		DebugDraw.draw_point(get_tree(), hit.position, 0.08, Color(0,1,0,1), 10)
+		DebugDraw.draw_ray(get_tree(), hit.position, hit.position+hit.normal*5, 0.08, 0.09, Color(0,1,0,1), 10)
 	if hit:
 		_call_collider_damageable_trait(hit.collider, hit.position, hit.normal)
 		_spawn_hit_scene(hit.position, hit.normal)
