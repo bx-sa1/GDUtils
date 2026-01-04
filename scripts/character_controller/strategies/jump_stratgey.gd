@@ -8,14 +8,21 @@ class_name JumpStrategy extends MovementStrategy
 
 var jump_buffer: InputBuffer = InputBuffer.new(jump_buffer_time)
 var cayote_buffer := InputBuffer.new(cayote_buffer_time)
-func apply(character: CharacterController, delta: float, velocity: Velocity, wishdir: Vector3, forward: Vector3, updir: Vector3, is_on_floor: bool, is_on_wall: bool) -> Velocity:
-	if cayote_buffer.update(delta, is_on_floor) and\
-		jump_buffer.update(delta, Input.is_action_just_pressed(jump_action)):
-		velocity.vertical = updir * jump_height
+
+var is_jumping := false
+
+func apply(state: MovementState, delta: float) -> Velocity:
+	var velocity = state.velocity
+	var cb = cayote_buffer.update(delta, state.is_on_floor)
+	var jb = jump_buffer.update(delta, Input.is_action_just_pressed(jump_action))
+	if cb and jb:
+		velocity.vertical = state.updir * jump_height
 		jump_buffer.reset()
+		is_jumping = true
 
 	if Input.is_action_just_released(jump_action) and velocity.vertical.length() > 0:
 		velocity.vertical *= 0.5
 		cayote_buffer.reset()
+		is_jumping = false
 
 	return velocity

@@ -1,19 +1,25 @@
 class_name CharacterController extends CharacterBody3D
 
+enum MovementType {
+	NORMAL,
+	STRAFE,
+	FLY
+	}
 @export var debug = false
 @export_category("References")
 @export var head: Node3D
-@export var visual: Node3D
-@export var collision: CollisionShape3D
+@export var body: CollisionShape3D
 @export_category("Settings")
 @export var focus_length: float = 10
 @export var look_sensitivity: float = 1.0
 @export_range(0, 90) var pitch_lower_limit: float = 89
 @export_range(0, 90) var pitch_upper_limit: float = 89
-@export var strafe: bool = true
+@export var movement_type = MovementType.STRAFE
 @export var max_step_height: float = 0.2
 @export var gravity_accel: float = 98.1
 @export var gravity: bool = true
+@export var hold_distance: float = 3
+@export var hold_lerp: float = 0.3
 @export_category("Components")
 @export var strategies: Array[MovementStrategy]
 
@@ -27,6 +33,9 @@ var mouse_captured: bool = false
 var current_focus: Node3D
 var current_holding: RigidBody3D
 var current_holding_freeze_mode: RigidBody3D.FreezeMode
+var is_moving := false
+var is_stopping := false
+var is_falling := false
 
 const MIN_STEP_HEIGHT := 0.1
 
@@ -37,6 +46,8 @@ func get_strategy(type: Variant) -> MovementStrategy:
 		if is_instance_of(c, type):
 			return c
 	return null
+
+
 
 func look(event: InputEvent) -> void:
 	if not mouse_captured:
@@ -55,11 +66,14 @@ func look(event: InputEvent) -> void:
 		_pitch = clampf(_pitch, -pitch_lower_limit, pitch_upper_limit)
 
 		var rot = Vector3(deg_to_rad(_pitch), deg_to_rad(_yaw), 0)
-		if strafe:
-			head.transform.basis = Basis(Vector3.RIGHT, rot.x)
-			transform.basis = Basis(Vector3.UP, rot.y)
-		else:
-			head.transform.basis = Basis.from_euler(rot)
+		match movement_type:
+			MovementType.NORMAL:
+				head.transform.basis = Basis.from_euler(rot)
+			MovementType.STRAFE:
+				head.transform.basis = Basis(Vector3.RIGHT, rot.x)
+				transform.basis = Basis(Vector3.UP, rot.y)
+			MovementType.FLY:
+				transform.basis = Basis.from_euler(rot)
 
 func check_focus(origin: Vector3, dir: Vector3, interact: bool) -> void:
 	var params = PhysicsRayQueryParameters3D.create(origin, origin+dir*focus_length)
@@ -94,8 +108,7 @@ func _interact() -> void:
 				current_holding.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 
 func move(delta: float, input_axis := Vector2.ZERO) -> void:
-	var wishdir = (head.global_basis * Vector3(input_axis.x, 0.0, input_axis.y)).normalized()
-	wishdir = _project_ground_plane(wishdir)
+	var wishdir = _calc_wishdir(input_axis)
 	_forward = _calc_forward(wishdir)
 
 	if gravity:
@@ -105,17 +118,44 @@ func move(delta: float, input_axis := Vector2.ZERO) -> void:
 	_velocity.vertical = velocity.project(up_direction)
 	_velocity.horizontal = velocity - _velocity.vertical
 	for strat in strategies:
-		_velocity = strat.apply(self, delta, _velocity, wishdir, _forward, up_direction, is_on_floor(), is_on_wall())
+		var state := MovementStrategy.MovementState.new()
+		state.velocity = _velocity
+		state.wishdir = wishdir
+		state.forward = _forward
+		state.updir = up_direction
+		state.is_on_floor = is_on_floor()
+		state.is_on_wall = is_on_wall()
+		state.current_holding = current_holding
+		_velocity = strat.apply(state, delta)
 	velocity = _velocity.sum()
 	move_and_slide()
 
+	if current_holding:
+		var current_position = current_holding.global_position
+		var new_position = head.global_transform.translated_local(Vector3.FORWARD*hold_distance).origin
+		current_holding.move_and_collide((new_position - current_position) * hold_lerp)
+		current_holding.global_basis = Basis(current_holding.global_basis.get_rotation_quaternion().slerp(head.global_basis.get_rotation_quaternion(), hold_lerp))
+
+	_push_contact_bodies()
 	if is_on_floor():
 		_handle_step()
 
-	if visual:
-		var visual_forward = visual.global_basis.z
-		var target_angle := visual_forward.signed_angle_to(_forward, up_direction)
-		visual.rotate(up_direction, target_angle)
+	var visual_forward = body.global_basis.z
+	var target_angle := visual_forward.signed_angle_to(_forward, up_direction)
+	body.rotate(up_direction, target_angle)
+
+	is_moving = _velocity.horizontal.length() > 0 and wishdir.length() > 0
+	is_stopping = _velocity.horizontal.length() > 0 and wishdir.length() == 0
+	is_falling = _velocity.vertical.length() > 0 and _velocity.vertical.dot(up_direction) == -1
+
+func _push_contact_bodies() -> void:
+	for i in get_slide_collision_count():
+		var sc := get_slide_collision(i)
+		var c := sc.get_collider()
+		if not c is RigidBody3D:
+			continue
+		c.apply_central_impulse(-sc.get_normal() * 0.8)
+		c.apply_impulse(-sc.get_normal() * 0.01, sc.get_position())
 
 
 func _handle_step():
@@ -152,12 +192,12 @@ func _check_collision_is_wall(col: KinematicCollision3D) -> bool:
 	return false
 
 func _get_bottom() -> Vector3:
-	var a = collision.global_position + -up_direction*collision.shape.height/2
+	var a = body.global_position + -up_direction*body.shape.height/2
 	a += up_direction*0.01
 	return a
 
 func _get_top() -> Vector3:
-	var a = collision.global_position + up_direction*collision.shape.height/2
+	var a = body.global_position + up_direction*body.shape.height/2
 	return a
 
 func _get_step_height(col: KinematicCollision3D) -> float:
@@ -182,9 +222,22 @@ func _project_ground_plane(v: Vector3) -> Vector3:
 	return (v - v.project(up_direction)).normalized()
 
 func _calc_forward(wishdir: Vector3) -> Vector3:
-	if strafe:
-		return _project_ground_plane(-head.global_basis.z)
-	else:
-		if wishdir.length() > 0:
-			_last_forward = wishdir
-		return _last_forward
+	match movement_type:
+		MovementType.STRAFE:
+			return _project_ground_plane(-head.global_basis.z)
+		MovementType.NORMAL:
+			if wishdir.length() > 0:
+				_last_forward = wishdir
+			return _last_forward
+		MovementType.FLY:
+			return -head.global_basis.z
+		_:
+			assert(false)
+			return Vector3.ZERO
+
+func _calc_wishdir(input_axis: Vector2) -> Vector3:
+	var wishdir = (head.global_basis * Vector3(input_axis.x, 0.0, input_axis.y)).normalized()
+	match movement_type:
+		MovementType.NORMAL, MovementType.STRAFE:
+			wishdir = _project_ground_plane(wishdir)
+	return wishdir

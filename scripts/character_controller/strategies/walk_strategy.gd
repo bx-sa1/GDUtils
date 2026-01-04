@@ -1,24 +1,23 @@
 @tool
 class_name WalkStrategy extends MovementStrategy
 
-@export_range(0, 100, 0.01, "suffix:m/s") var move_speed: float = 32
-@export_range(0, 100, 0.01, "suffix:m/s") var stop_speed: float = 10
+@export_range(0, 100, 0.001, "suffix:m/s") var move_speed: float = 10
+@export_range(0, 100, 0.001, "suffix:m/s") var stop_speed: float = 3.125
 @export_range(0, 1, 0.001, "suffix:s") var move_accel: float = 0.1
 @export_range(0, 1, 0.001, "suffox:s") var air_accel: float = 1
 @export_range(0, 1, 0.001, "suffix:s") var friction: float = 0.166
 
-func _init_always_active() -> bool:
-	return true
-
-func apply(character: CharacterController, delta: float, velocity: Velocity, wishdir: Vector3, forward: Vector3, updir: Vector3, is_on_floor: bool, is_on_wall: bool) -> Velocity:
-	velocity = _friction(is_on_floor, velocity, delta)
+func apply(state: MovementState, delta: float) -> Velocity:
+	var velocity = state.velocity
+	velocity = _friction(state.is_on_floor, velocity, delta)
 
 	var accel_invtime: float
-	if is_on_floor:
+	if state.is_on_floor:
 		accel_invtime = move_accel
 	else:
 		accel_invtime = air_accel
-	velocity = _accelerate(velocity, wishdir, accel_invtime, delta)
+	velocity = _accelerate(velocity, state.wishdir, accel_invtime, delta)
+
 	return velocity
 
 func _accelerate(velocity: Velocity, move_dir: Vector3, accel_time: float, delta: float) -> Velocity:

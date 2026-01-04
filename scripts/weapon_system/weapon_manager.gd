@@ -56,6 +56,7 @@ func drop_weapon(as_pickup = false) -> void:
 		pickup.global_transform = weapon_parent_node.global_transform
 		pickup.apply_impulse(-pickup.global_basis.z * 10)
 	current_weapon = null
+	weapon_changed.emit(current_weapon)
 
 func reload() -> void:
 	if not current_weapon:
@@ -77,8 +78,4 @@ func fire(origin: Vector3, dir: Vector3) -> void:
 	if not current_weapon.data.can_fire():
 		return
 
-
-	if fire_started.has_connections():
-		fire_started.emit()
-		await fire_finished
 	current_weapon.fire(origin, dir, fire_collision_mask)
