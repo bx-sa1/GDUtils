@@ -1,4 +1,4 @@
-class_name InteractableTrait extends Trait
+class_name InteractionComponent extends Node
 
 @export var debug: bool = false
 @export var holdable: bool = false
