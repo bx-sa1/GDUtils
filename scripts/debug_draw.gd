@@ -7,6 +7,21 @@ static func _create_mat() -> Material:
 	mat.vertex_color_use_as_albedo = true
 	return mat
 
+static func draw_shapecast(tree: SceneTree, shape: Shape3D, shape_basis: Basis, from: Vector3, to: Vector3, radius: float = 1, color: Color = Color(0,1,0,1), ttl: float = 1.0) -> void:
+	if shape == null:
+		return
+
+	draw_line(tree, from, to, radius, color, ttl)
+	var shape_mesh = shape.get_debug_mesh()
+	if shape_mesh == null:
+		return
+
+	for i in shape_mesh.get_surface_count():
+		var shape_arrays = shape_mesh.surface_get_arrays(i)
+		var shape_verts = shape_arrays[Mesh.ARRAY_VERTEX] * Transform3D(shape_basis, to)
+		var shape_idxs = shape_arrays[Mesh.ARRAY_INDEX] if shape_mesh.surface_get_array_index_len(0) > 0 else []
+		draw_mesh(tree, shape_verts, shape_idxs, color, ttl)
+
 static func draw_ray(tree: SceneTree, from: Vector3, to: Vector3, radius: float = 1, end_radius: float = 1.5, color: Color = Color(0,1,0,1), ttl: float = 1.0) -> void:
 
 	draw_line(tree, from, to, radius, color, ttl)
@@ -86,8 +101,12 @@ static func draw_mesh(tree: SceneTree, verts: Array, ids: Array, color: Color, t
 	mesh.surface_begin(ImmediateMesh.PRIMITIVE_TRIANGLES, mat)
 	mesh.surface_set_color(color)
 
-	for id in ids:
-		mesh.surface_add_vertex(verts[id])
+	if ids == []:
+		for  v in verts:
+			mesh.surface_add_vertex(v)
+	else:
+		for id in ids:
+			mesh.surface_add_vertex(verts[id])
 
 	mesh.surface_end()
 

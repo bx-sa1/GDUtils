@@ -45,7 +45,7 @@ func start_reload() -> void:
 func finish_reload() -> void:
 	data.finish_reload()
 
-func fire(origin: Vector3, dir: Vector3, collision_mask: int) -> void:
+func start_fire(origin: Vector3, dir: Vector3, collision_mask: int) -> void:
 	var ammount = data.fire()
 	for i in ammount:
 		var spread_dir = data.get_spread_dir(dir)
@@ -56,6 +56,9 @@ func fire(origin: Vector3, dir: Vector3, collision_mask: int) -> void:
 
 @abstract
 func _fire(aim_point: Vector3, collision_mask: int) -> void
+
+func finish_fire() -> void:
+	pass
 
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
@@ -93,8 +96,3 @@ func _spawn_hit_scene(position: Vector3, normal: Vector3):
 	decal.global_position = position + normal * 0.01
 	var decal_rotation = Quaternion(decal.global_basis.z, normal)
 	decal.quaternion *= decal_rotation
-
-func _call_collider_damageable_trait(collider: Node, position: Vector3, normal: Vector3, damage_modifier: float = 1.0):
-	if collider.has_meta("DamageableTrait"):
-		var damageable_trait: DamageableTrait = collider.get_meta("DamageableTrait")
-		damageable_trait.on_damage(data.damage * damage_modifier, position, normal)

@@ -1,4 +1,4 @@
-class_name ProjectileExplosion extends Area3D
+class_name ProjectileExplosion extends HitBox
 
 @export var debug: bool = false
 @export var force: float = 1.0
@@ -24,5 +24,3 @@ func _push_bodies() -> void:
 			body.apply_impulse(force_dir * force_mag)
 		elif body is CharacterController:
 			body.velocity = force_dir * force_mag
-		else:
-			_weapon._call_collider_damageable_trait(body, Vector3.INF, Vector3.ZERO, decay)

@@ -10,6 +10,7 @@ class_name WeaponData extends Resource
 # How many times you can shoot per second
 @export var fire_rate: float = 1.0
 @export var spread: float = 0.0
+@export var recoil_pattern: Curve2D
 @export var auto: bool = false
 @export var damage: float
 
@@ -33,6 +34,9 @@ func should_reload() -> bool:
 
 func is_infinite_ammo() -> bool:
 	return max_ammo_count == 0
+
+func get_ammo_fraction() -> float:
+	return ammo_count/max_ammo_count
 
 func start_reload() -> void:
 	if reloading:

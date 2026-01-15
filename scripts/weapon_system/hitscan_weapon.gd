@@ -13,6 +13,7 @@ func _fire(aim_point: Vector3, collision_mask: int) -> void:
 	if debug:
 		DebugDraw.draw_point(get_tree(), hit.position, 0.08, Color(0,1,0,1), 10)
 		DebugDraw.draw_ray(get_tree(), hit.position, hit.position+hit.normal*5, 0.08, 0.09, Color(0,1,0,1), 10)
-	if hit:
-		_call_collider_damageable_trait(hit.collider, hit.position, hit.normal)
-		_spawn_hit_scene(hit.position, hit.normal)
+	if hit and hit.collider is HitBox:
+		var hurtbox: HurtBox = hit.collider
+		hurtbox.take_damage(data.damage)
+	_spawn_hit_scene(hit.position, hit.normal)

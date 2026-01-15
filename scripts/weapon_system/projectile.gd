@@ -28,6 +28,8 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			e._weapon = _weapon
 			e.collision_mask = 0xFFFFFFFF
 		else:
-			_weapon._call_collider_damageable_trait(col, pos, norm)
+			if col is HurtBox:
+				var hurtbox = col as HurtBox
+				hurtbox.take_damage(_weapon.damage)
 			_weapon._spawn_hit_scene(pos, norm)
 		queue_free()
