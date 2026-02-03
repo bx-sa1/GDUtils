@@ -1,4 +1,4 @@
-extends Node
+class_name SceneManager extends Node
 
 var _scene_stack: Array[Node]
 var root

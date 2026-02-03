@@ -19,4 +19,4 @@ func _fire(aim_point: Vector3, collision_mask: int) -> void:
 		var hurtbox: HurtBox = hit.collider
 		hurtbox.health.take_damage(damage)
 
-	_spawn_hit_scene(hit.position, hit.normal)
+	_spawn_hit_scene(hit.collider, hit.position, hit.normal)

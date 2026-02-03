@@ -5,6 +5,7 @@ class_name CharacterController extends CharacterBody3D
 @export var head: Node3D
 @export var body: CollisionShape3D
 @export_category("Settings")
+@export var mass: float = 72
 @export var strafe: bool = true
 @export var max_step_height: float = 0.2
 @export var hold_distance: float = 3
@@ -17,13 +18,10 @@ class_name CharacterController extends CharacterBody3D
 @export_category("Movement")
 @export_range(0, 100, 0.001, "suffix:m/s") var max_speed: float = 10
 @export_range(0, 100, 0.001, "suffix:m/s") var stop_speed: float = 3.125
-@export_range(0, 100, 0.001, "suffix:m/s") var jump_height: float = 1.5
-@export_range(0, 1, 0.001, "suffix:s") var friction_time: float = 0.166
 
 var forward_direction := Vector3.ZERO
 var _last_forward := Vector3.ZERO
 var _last_floor_max_angle = floor_max_angle
-var _timers: Dictionary[String, Timer]
 var _last_ladder_collision: Dictionary = {}
 var _last_ledge_collision: Dictionary = {}
 var jumping = false
@@ -31,64 +29,59 @@ var crouching = false
 
 var current_holding: RigidBody3D
 var current_holding_freeze_mode: RigidBody3D.FreezeMode
-var speed_modifier: float = 1.0
+var _speed_modifier: float = 1.0
 
 @onready var _normal_height: float = get_height()
 
 const LEDGE_THRESHOLD := 0.1
 
-func add_timer(name: String, start_time: float) -> Timer:
-	if _timers.has(name):
-		_timers[name].wait_time = start_time
-	else:
-		var timer = Timer.new()
-		timer.one_shot = true
-		timer.autostart = false
-		timer.wait_time = start_time
-		_timers[name] = timer
-		add_child(timer)
-	return _timers[name]
-
-func remove_timer(name: String):
-	remove_child(_timers[name])
-	_timers[name].queue_free()
-
-func get_timer(name: String) -> Timer:
-	return _timers.get(name)
-
-func move_and_slide_ext(gravity: bool, stepup: bool, push: bool) -> bool:
+func slide_and_step(gravity: bool, stepup: bool, push: bool) -> bool:
 	var delta = get_physics_process_delta_time() if Engine.is_in_physics_frame() else get_process_delta_time()
 
 	up_direction = -get_gravity().normalized()
-	if gravity and not is_on_floor():
+	if gravity:
 		velocity += get_gravity() * delta
 
-	move_and_slide()
+	var vel: Vector3 = velocity
+	var fraction: float = 1.0
+	var steps: int = 0
+	var i: int = 0
+	while steps < 4:
+		velocity = vel * fraction
+		if not move_and_slide():
+			return false
+		if is_on_floor_only():
+			return false
 
-	_last_ledge_collision = {}
-	_last_ladder_collision = {}
-	for i in get_slide_collision_count():
-		var sc = get_slide_collision(i)
+		for c in get_slide_collision_count():
+			var sc = get_slide_collision(c)
+			var motion = sc.get_travel() + sc.get_remainder()
+			var current_fraction = fraction * (sc.get_travel().length()/motion.length())
+			# handle step up
+			if stepup and is_near_floor() and sc.get_angle(0, up_direction) >= floor_max_angle:
+				var step = check_ledge(max_step_height, sc)
+				if step:
+					var step_height = max_step_height * (1.0 - step.down_fraction)
+					print_debug("Forward Fraction: %s" % step.forward_fraction)
+					print_debug("Step Height: %s" % step_height)
+					if step.forward_fraction >= 1.0:
+						global_transform = step.final_transform
+						velocity = vel
+						continue
+					elif step.forward_fraction > current_fraction:
+						global_transform = step.final_transform
+						fraction -= current_fraction
+						steps += 1
 
-		var on_ledge = check_ledge(sc)
-		if on_ledge:
-			_last_ledge_collision = on_ledge
+			if push:
+				push_contact_bodies(sc)
 
-		var on_ladder = check_ladder(sc)
-		if on_ladder:
-			_last_ladder_collision = on_ladder
+		if steps == i:
+			break
+		else:
+			i += 1
 
-		if stepup and on_ledge:
-			if on_ledge.ledge_height < max_step_height:
-				print_debug("Step height is ", on_ledge.ledge_height)
-				global_position += up_direction * (on_ledge.ledge_height + LEDGE_THRESHOLD) + sc.get_remainder()
-				velocity = get_last_motion()/delta
-				_last_ledge_collision = {}
-
-		if push:
-			push_contact_bodies(sc)
-
-	return false
+	return true
 
 func set_holding(body: RigidBody3D) -> void:
 	if current_holding:
@@ -111,32 +104,7 @@ func move_holding() -> void:
 	current_holding.global_basis = Basis(current_holding.global_basis.get_rotation_quaternion().slerp(head.global_basis.get_rotation_quaternion(), hold_lerp))
 
 
-func check_jump(jump_action: String) -> void:
-	var coyote_jump_timer = get_timer("coyote_jump")
-	var buffer_jump_timer = get_timer("buffer_jump")
-	if not coyote_jump_timer or not buffer_jump_timer:
-		coyote_jump_timer = add_timer("coyote_jump", coyote_jump_time)
-		buffer_jump_timer = add_timer("buffer_jump", buffer_jump_time)
-
-	if is_on_floor():
-		jumping = false
-		coyote_jump_timer.start()
-	if Input.is_action_just_pressed(jump_action):
-		buffer_jump_timer.start()
-
-	if coyote_jump_timer.time_left > 0 and buffer_jump_timer.time_left > 0:
-		jump()
-		buffer_jump_timer.stop()
-		jumping = true
-
-	var vel_vert = velocity.dot(up_direction) * up_direction
-	var vel_horiz = velocity - vel_vert
-	if Input.is_action_just_released(jump_action) and jumping:
-		vel_vert *= 0.5
-		velocity = vel_vert + vel_horiz
-		coyote_jump_timer.stop()
-
-func check_crouch(crouch_action: String) -> void:
+func crouch(crouch_action: String) -> void:
 	if Input.is_action_pressed(crouch_action) and not is_on_ladder() and not is_on_ledge():
 		crouching = true
 	elif crouching and is_on_ceiling():
@@ -146,10 +114,10 @@ func check_crouch(crouch_action: String) -> void:
 
 	var height
 	if crouching:
-		speed_modifier = crouch_speed_scale
+		set_speed_modifier(crouch_speed_scale)
 		height = crouch_height
 	else:
-		speed_modifier = 1.0
+		set_speed_modifier(1.0)
 		height = _normal_height
 
 	if get_height() != height:
@@ -159,18 +127,20 @@ func check_crouch(crouch_action: String) -> void:
 			body.shape.radius = height
 		elif body.shape is CapsuleShape3D:
 			body.shape.height = height
+		elif body.shape is CylinderShape3D:
+			body.shape.height = height
 		else:
 			print_debug("Unknown shape type!")
 
-func jump() -> void:
+func jump(_jump_height: float) -> void:
 	var a = PhysicsServer3D.area_get_param(get_world_3d().space, PhysicsServer3D.AREA_PARAM_GRAVITY)
-	var s = jump_height
+	var s = _jump_height
 	var u = velocity.project(up_direction).length()
 	var v = sqrt(u + 2 * a * s)
 	velocity += up_direction * v
 
 
-func friction(delta: float):
+func friction(delta: float, _friction_time: float):
 	var vel = velocity
 	if is_on_floor():
 		vel = vel.slide(up_direction)
@@ -184,9 +154,9 @@ func friction(delta: float):
 		return
 
 	var drop = 0.0
-	if friction_time > 0.0 and is_on_floor():
+	if _friction_time > 0.0:
 		var control = stop_speed if speed <= stop_speed else speed
-		drop += (control / friction_time) * delta
+		drop += (control / _friction_time) * delta
 
 	var new_speed = speed - drop
 	if new_speed < 0:
@@ -208,64 +178,59 @@ func rotate_body_to_forward() -> void:
 	var target_angle := visual_forward.signed_angle_to(forward_direction, up_direction)
 	body.rotate(up_direction, target_angle)
 
-func check_ledge(slide_collision: KinematicCollision3D) -> Dictionary:
-	#check if touching wall
-	if slide_collision.get_angle(0, up_direction) <= floor_max_angle:
-		return {}
+func check_ledge(max_ledge_height: float, slide_collision: KinematicCollision3D) -> Dictionary:
+	var transform = global_transform
+	var motion = up_direction * max_ledge_height
+	var collision: KinematicCollision3D = KinematicCollision3D.new()
+	var down_fraction: float = 1.0
+	if test_move(transform, motion, collision):
+		down_fraction = collision.get_travel().length()/motion.length()
 
-	var cp_offset = -slide_collision.get_normal() * slide_collision.get_remainder().length()
-	var top = global_position + up_direction * (get_height()/2)
-	var bottom = global_position - up_direction * (get_height()/2)
 
-	var dist_to_wall = (slide_collision.get_position() - bottom).slide(up_direction)
-	var from = top + dist_to_wall + cp_offset
-	var to = bottom + dist_to_wall + cp_offset
+	var forward_fraction: float = 1.0
+	transform = transform.translated(motion*down_fraction)
+	motion = slide_collision.get_remainder()
+	if test_move(transform, motion, collision):
+		forward_fraction = collision.get_travel().length()/motion.length()
 
-	var params = PhysicsRayQueryParameters3D.create(from, to)
-	params.exclude = [self.get_rid()]
+	transform = transform.translated(motion*forward_fraction)
+	motion = -up_direction * max_ledge_height
+	down_fraction = 1.0
+	if test_move(transform, motion, collision):
+		down_fraction = collision.get_travel().length()/motion.length()
 
-	var hit = get_world_3d().direct_space_state.intersect_ray(params)
-	if not hit or (hit.position - params.from).length() <= LEDGE_THRESHOLD:
-		return {}
+	if down_fraction < 1.0:
+			return {
+				"down_fraction": down_fraction,
+				"forward_fraction": forward_fraction,
+				"final_transform": transform.translated(collision.get_travel())
+				}
 
-	if debug:
-		DebugDraw.draw_ray(get_tree(), from, hit.position, 0.01, 0.02, Color(1,0,0,1), 10)
-	return {
-
-		"ledge_height": (hit.position - params.to).length()
-		}
-
-func check_ladder(slide_collision: KinematicCollision3D) -> Dictionary:
-	if not slide_collision.get_collider() is Node3D:
-		return {}
-
-	if not slide_collision.get_collider().is_in_group(ladder_group):
-		return {}
-
-	return {
-		"position": slide_collision.get_position(),
-		"normal": slide_collision.get_normal(),
-		"collider": slide_collision.get_collider()
-		}
+	return {}
 
 func push_contact_bodies(slide_collision: KinematicCollision3D) -> bool:
 	var c = slide_collision.get_collider()
-	if not c is RigidBody3D:
+	if c is RigidBody3D:
+		var momentum = mass * velocity + c.mass * c.linear_velocity
+		var total_mass = mass*c.mass
+		var new_speed = momentum.length()/total_mass
+		c.apply_impulse(c.mass * -slide_collision.get_normal() * new_speed, slide_collision.get_position())
+		return true
+	else:
 		return false
 
-	c.apply_central_impulse(-slide_collision.get_normal() * 0.8)
-	c.apply_impulse(-slide_collision.get_normal() * 0.01, slide_collision.get_position())
-	return true
-
 func is_near_floor() -> bool:
-	var bottom = global_position - up_direction * (get_height()/2)
-	var params: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(bottom, bottom - up_direction * max_step_height)
-	params.exclude = [self.get_rid()]
-	var hit = get_world_3d().direct_space_state.intersect_ray(params)
-	if hit:
+	if is_on_floor():
 		return true
 
-	return false
+	var bottom = global_position - up_direction * (get_height()/2)
+	var transform = global_transform
+	var motion = bottom - up_direction * max_step_height
+	if not test_move(transform, motion):
+		return false
+
+	return true
+
 
 func get_height() -> float:
 	if body.shape is BoxShape3D:
@@ -273,6 +238,8 @@ func get_height() -> float:
 	elif body.shape is SphereShape3D:
 		return body.shape.radius * 2
 	elif body.shape is CapsuleShape3D:
+		return body.shape.height
+	elif body.shape is CylinderShape3D:
 		return body.shape.height
 	elif body.shape is ConvexPolygonShape3D:
 		var vertices = body.shape.get_vertices()
@@ -299,11 +266,15 @@ func get_forward(wishdir: Vector3) -> Vector3:
 func get_wishvel(input_axis: Vector2) -> Vector3:
 	var wishdir = ((global_basis if strafe else head.global_basis) * Vector3(input_axis.x, 0.0, input_axis.y))
 	wishdir = wishdir.slide(up_direction)
-	var wishvel = wishdir * max_speed
+	var wishvel = wishdir * max_speed * _speed_modifier
 	return wishvel
 
-func is_jumping():
-	return jumping
+func set_speed_modifier(s: float) -> void:
+	_speed_modifier = s
+
+
+func get_speed_modifier() -> float:
+	return _speed_modifier
 
 func is_crouching():
 	return crouching
