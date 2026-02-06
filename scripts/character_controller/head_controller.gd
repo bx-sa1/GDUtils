@@ -27,7 +27,7 @@ func _ready() -> void:
 
 	parent = get_parent()
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if Engine.is_editor_hint():
 		return
 
@@ -41,14 +41,27 @@ func _input(event: InputEvent) -> void:
 		elif Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw += -event.relative.x * look_sensitivity * 0.1
-		pitch += -event.relative.y * look_sensitivity * 0.1
-		pitch = clampf(pitch, -pitch_lower_limit, pitch_upper_limit)
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if event is InputEventMouseMotion:
+			yaw += -event.relative.x * look_sensitivity * 0.1
+			pitch += -event.relative.y * look_sensitivity * 0.1
+			apply_rotation()
 
-		var rot = Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0)
-		if parent.strafe:
-			transform.basis = Basis(Vector3.RIGHT, rot.x)
-			parent.transform.basis = Basis(Vector3.UP, rot.y)
-		else:
-			transform.basis = Basis.from_euler(rot)
+func _process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
+
+	var motion = Input.get_vector("look_left", "look_right", "look_down", "look_up")
+	if motion.length() > 0:
+		yaw -= motion.x * look_sensitivity
+		pitch -= motion.y * look_sensitivity
+		apply_rotation()
+
+func apply_rotation() -> void:
+	pitch = clampf(pitch, -pitch_lower_limit, pitch_upper_limit)
+	var rot = Vector3(deg_to_rad(pitch), deg_to_rad(yaw), 0)
+	if parent.strafe:
+		transform.basis = Basis(Vector3.RIGHT, rot.x)
+		parent.transform.basis = Basis(Vector3.UP, rot.y)
+	else:
+		transform.basis = Basis.from_euler(rot)

@@ -4,32 +4,30 @@ class_name CharacterController extends CharacterBody3D
 @export_category("References")
 @export var head: Node3D
 @export var body: CollisionShape3D
+@export var visual: Node3D
 @export_category("Settings")
 @export var mass: float = 72
 @export var strafe: bool = true
 @export var max_step_height: float = 0.2
 @export var hold_distance: float = 3
 @export var hold_lerp: float = 0.3
-@export var crouch_height: float = 1.0
-@export var crouch_speed_scale: float = 0.5
 @export var ladder_group: String = "ladder"
-@export var coyote_jump_time: float = 0.1
-@export var buffer_jump_time: float = 0.2
+@export var crouch_height: float = 1.0
 @export_category("Movement")
 @export_range(0, 100, 0.001, "suffix:m/s") var max_speed: float = 10
 @export_range(0, 100, 0.001, "suffix:m/s") var stop_speed: float = 3.125
 
-var forward_direction := Vector3.ZERO
 var _last_forward := Vector3.ZERO
 var _last_floor_max_angle = floor_max_angle
 var _last_ladder_collision: Dictionary = {}
 var _last_ledge_collision: Dictionary = {}
-var jumping = false
+var _last_shape: WeakRef
 var crouching = false
 
 var current_holding: RigidBody3D
 var current_holding_freeze_mode: RigidBody3D.FreezeMode
 var _speed_modifier: float = 1.0
+
 
 @onready var _normal_height: float = get_height()
 
@@ -62,8 +60,9 @@ func slide_and_step(gravity: bool, stepup: bool, push: bool) -> bool:
 				var step = check_ledge(max_step_height, sc)
 				if step:
 					var step_height = max_step_height * (1.0 - step.down_fraction)
-					print_debug("Forward Fraction: %s" % step.forward_fraction)
-					print_debug("Step Height: %s" % step_height)
+					if debug:
+						print_debug("Forward Fraction: %s" % step.forward_fraction)
+						print_debug("Step Height: %s" % step_height)
 					if step.forward_fraction >= 1.0:
 						global_transform = step.final_transform
 						velocity = vel
@@ -104,40 +103,40 @@ func move_holding() -> void:
 	current_holding.global_basis = Basis(current_holding.global_basis.get_rotation_quaternion().slerp(head.global_basis.get_rotation_quaternion(), hold_lerp))
 
 
-func crouch(crouch_action: String) -> void:
-	if Input.is_action_pressed(crouch_action) and not is_on_ladder() and not is_on_ledge():
-		crouching = true
-	elif crouching and is_on_ceiling():
-		crouching = true
-	else:
-		crouching = false
+func can_crouch() -> bool:
+	if is_on_ladder() or is_on_ledge():
+		return false
+	return true
 
-	var height
-	if crouching:
-		set_speed_modifier(crouch_speed_scale)
-		height = crouch_height
-	else:
-		set_speed_modifier(1.0)
-		height = _normal_height
+func can_standup() -> bool:
+	if not crouching:
+		return false
 
-	if get_height() != height:
-		if body.shape is BoxShape3D:
-			body.shape.extents.y = height
-		elif body.shape is SphereShape3D:
-			body.shape.radius = height
-		elif body.shape is CapsuleShape3D:
-			body.shape.height = height
-		elif body.shape is CylinderShape3D:
-			body.shape.height = height
-		else:
-			print_debug("Unknown shape type!")
+	var last_height = get_height()
+	set_height(_normal_height)
+	var params := PhysicsShapeQueryParameters3D.new()
+	params.transform = global_transform
+	params.shape = body.shape
+	params.exclude = [self.get_rid()]
+	set_height(last_height)
+	var hit = get_world_3d().direct_space_state.get_rest_info(params)
+	if hit:
+		var adot = up_direction.dot(hit.normal)
+		var angle = acos(adot)
+		if adot < 0 and angle <= floor_max_angle:
+			return false
+
+	return true
+
 
 func jump(_jump_height: float) -> void:
 	var a = PhysicsServer3D.area_get_param(get_world_3d().space, PhysicsServer3D.AREA_PARAM_GRAVITY)
 	var s = _jump_height
-	var u = velocity.project(up_direction).length()
-	var v = sqrt(u + 2 * a * s)
-	velocity += up_direction * v
+	var u = pow(velocity.project(up_direction).length(), 2)
+	var v = sqrt(2 * a * s)
+	var pb = (mass * velocity) + (mass * v * up_direction)
+	var va = pb.length() / (mass*2)
+	velocity = pb.normalized() * va
 
 
 func friction(delta: float, _friction_time: float):
@@ -173,10 +172,6 @@ func accelerate(wishdir: Vector3, wishspd: float, _accel_time: float, delta: flo
 		accel = addspeed
 	velocity += accel*wishdir
 
-func rotate_body_to_forward() -> void:
-	var visual_forward = body.global_basis.z
-	var target_angle := visual_forward.signed_angle_to(forward_direction, up_direction)
-	body.rotate(up_direction, target_angle)
 
 func check_ledge(max_ledge_height: float, slide_collision: KinematicCollision3D) -> Dictionary:
 	var transform = global_transform
@@ -241,37 +236,45 @@ func get_height() -> float:
 		return body.shape.height
 	elif body.shape is CylinderShape3D:
 		return body.shape.height
-	elif body.shape is ConvexPolygonShape3D:
-		var vertices = body.shape.get_vertices()
-		var min_y = vertices[0].y
-		var max_y = vertices[0].y
-		for vertex in vertices:
-			min_y = min(min_y, vertex.y)
-			max_y = max(max_y, vertex.y)
-			return max_y - min_y
 	else:
 		print_debug("Unknown shape type!")
 		return 0.0
 	return 0.0
 
+func get_visual_angle_to_forward(axis: Vector3) -> float:
+	var forward = get_forward()
+	var visual_forward = -visual.global_basis.z
+	var target_angle := visual_forward.signed_angle_to(forward, axis)
+	return target_angle
 
-func get_forward(wishdir: Vector3) -> Vector3:
+func get_forward() -> Vector3:
 	if strafe:
 		return -head.global_basis.z.slide(up_direction)
 	else:
-		if wishdir.length() > 0:
-			_last_forward = wishdir
 		return _last_forward
 
 func get_wishvel(input_axis: Vector2) -> Vector3:
 	var wishdir = ((global_basis if strafe else head.global_basis) * Vector3(input_axis.x, 0.0, input_axis.y))
 	wishdir = wishdir.slide(up_direction)
 	var wishvel = wishdir * max_speed * _speed_modifier
+	if wishdir.length() > 0:
+		_last_forward = wishdir
 	return wishvel
 
 func set_speed_modifier(s: float) -> void:
 	_speed_modifier = s
 
+func set_height(height: float) -> void:
+	if body.shape is BoxShape3D:
+		body.shape.extents.y = height*0.5
+	elif body.shape is SphereShape3D:
+		body.shape.radius = height*0.5
+	elif body.shape is CapsuleShape3D:
+		body.shape.height = height
+	elif body.shape is CylinderShape3D:
+		body.shape.height = height
+	else:
+		print_debug("Unknown shape type!")
 
 func get_speed_modifier() -> float:
 	return _speed_modifier

@@ -2,8 +2,12 @@ class_name Health extends Node
 
 @export var health: float
 var modifier: HealthModifier
+var start_health: float
 
 signal killed
+
+func _ready() -> void:
+	start_health = health
 
 func _process(delta: float) -> void:
 	if modifier:
